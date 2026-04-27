@@ -1,3 +1,17 @@
+# Qt build folders
 build-*/
+*.o
+*.so
+*.exe
+*.dll
+*.dylib
+
+# Qt Creator user files
 *.user
 *.user.*
+
+# CMake build (если используете CMake)
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+cmake-build-*/
+
