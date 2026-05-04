@@ -105,15 +105,17 @@ bool segmentIntersectsCircle(const Vec3D& p1, const Vec3D& p2,
 }
 
 void rightPolygon(HighReliefZone& pol){
+    if (pol.vertices.size() < 3) return;
+
     AirSpace airspace;
     airspace.points = pol.vertices;
     float* distanceMatrix = createDistanceMatrix(airspace);
     std::vector<int> result = LittleAlg(distanceMatrix, pol.vertices.size());
 
     QVector<Vec3D> sortedVertices;
-    sortedVertices.reserve(result.size());
 
-    for (int index : result) {
+    for (size_t i = 0; i < result.size() - 1; ++i) {
+        int index = result[i];
         if (index >= 0 && index < pol.vertices.size()) {
             sortedVertices.push_back(pol.vertices[index]);
         }
@@ -122,7 +124,6 @@ void rightPolygon(HighReliefZone& pol){
     pol.vertices = sortedVertices;
     delete[] distanceMatrix;
 }
-
 bool segmentIntersectsPolygon(const Vec3D& p1, const Vec3D& p2, const HighReliefZone& pol, double epsilon){
     QVector<Vec3D> points = pol.vertices;
     if(points.size() < 3) return false;
@@ -405,9 +406,19 @@ float* createDistanceMatrix(const AirSpace& airspace) {
         continue;
       }
 
-      double distance = calculateDistanceWithPVO(airspace.points[i],
-                                                 airspace.points[j], airspace);
-      matrix[i * n + j] = static_cast<float>(distance);
+      BlockedAirCorridor corridor;
+      corridor.id1 = i;
+      corridor.id2 = j;
+
+      bool isBlocked = airspace.air_corridors.contains(corridor);
+
+      if (isBlocked) {
+        matrix[i * n + j] = INFINITY_F;
+      } else {
+        double distance = calculateDistanceWithPVO(airspace.points[i],
+                                                   airspace.points[j], airspace);
+        matrix[i * n + j] = static_cast<float>(distance);
+      }
     }
   }
 

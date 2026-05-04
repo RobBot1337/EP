@@ -41,7 +41,11 @@ MainWindow::MainWindow(QWidget *parent)
         Vec3D(100, 100, 0),
         Vec3D(256, 300, 0),
         Vec3D(400, 700, 0),
-        Vec3D(500, 600, 0)
+        Vec3D(500, 600, 0),
+        Vec3D(700, 700, 0),
+        Vec3D(650, 200, 0),
+        Vec3D(450, 300, 0),
+        Vec3D(280, 450, 0)
     };
 
     QSet<BlockedAirCorridor> blockedPaths;
@@ -49,6 +53,9 @@ MainWindow::MainWindow(QWidget *parent)
     QVector<Pvo> pvo_list;
 
     QVector<HighReliefZone> highreliefzone_list;
+
+
+
 
     Pvo pvo_main;
     pvo_main.id = 0;
@@ -77,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
     HighReliefZone highreliefzone1;
     highreliefzone1.id = 1;
     highreliefzone1.vertices = {
-        Vec3D(50, 743, 0),
+        Vec3D(400, 743, 0),
         Vec3D(60, 700, 0),
         Vec3D(200, 690, 0)
     };
@@ -99,7 +106,6 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     for(int i = 0; i < highreliefzone_list.size(); ++i){
-        //rightPolygon(highreliefzone_list[i]);
         drawPolygon(highreliefzone_list[i], workspace, size_of_window);
     }
 
@@ -159,7 +165,6 @@ void MainWindow::drawPathWithObstacles(const Vec3D& p1, const Vec3D& p2,
                                         const AirSpace& airspace,
                                         QGraphicsScene* scene, int windowHeight)
 {
-    // Сначала проверяем пересечение с многоугольниками (они приоритетнее)
     for(const auto& zone : airspace.high_relief_zones) {
         if(segmentIntersectsPolygon(p1, p2, zone)) {
             BypassPath bypass = calculatePolygonBypass(p1, p2, zone);
@@ -168,7 +173,6 @@ void MainWindow::drawPathWithObstacles(const Vec3D& p1, const Vec3D& p2,
                 for(int i = 0; i < bypass.waypoints.size() - 1; ++i) {
                     bool hasIntersection = false;
 
-                    // Проверяем окружности на каждой секции
                     for(const auto& pvo : airspace.pvo_list) {
                         double distToSegment = distanceToSegment(pvo.position,
                                             bypass.waypoints[i], bypass.waypoints[i + 1]);
@@ -216,7 +220,6 @@ void MainWindow::drawPathWithObstacles(const Vec3D& p1, const Vec3D& p2,
         }
     }
 
-    // Если нет многоугольников, проверяем окружности
     for(const auto& pvo : airspace.pvo_list) {
         double distToSegment = distanceToSegment(pvo.position, p1, p2);
         if(distToSegment <= pvo.radius) {
