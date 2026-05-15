@@ -51,7 +51,9 @@ BypassPath calculateCircularBypass(const Vec3D& start, const Vec3D& end, const V
 BypassPath calculatePolygonBypass(const Vec3D& start, const Vec3D& end, const HighReliefZone& zone);
 double calculateDistanceWithPVO(const Vec3D& p1, const Vec3D& p2, const AirSpace& airspace);
 
-float* createDistanceMatrix(const AirSpace& airspace);
+float* createDistanceMatrix(const AirSpace& airspace, int numSalesmen);
 void deleteDistanceMatrix(float* matrix);
+QVector<QVector<int>> splitTourIntoTours(const std::vector<int>& fullTour, int originalSize, int numSalesmen);
+std::vector<std::vector<int>> solveGreedyMTSP(const AirSpace& airspace, int numSalesmen);
 
 #endif

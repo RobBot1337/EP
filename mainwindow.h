@@ -21,7 +21,7 @@ public:
 private:
     Ui::MainWindow *ui;
     void drawPoint(Vec3D point, QGraphicsScene* scene, int windowHeight, int index);
-    void drawLine(Vec3D p1, Vec3D p2, QGraphicsScene* scene, int windowHeight);
+    void drawLine(Vec3D p1, Vec3D p2, QGraphicsScene* scene, int windowHeight, QColor color = Qt::black);
     void drawCircle(Pvo pvo, QGraphicsScene* scene, int windowHeight);
     void drawPathWithPVO(const Vec3D& p1, const Vec3D& p2, const AirSpace& airspace,
                         QGraphicsScene* scene, int windowHeight);
@@ -29,7 +29,7 @@ private:
                  const Vec3D& end, QGraphicsScene* scene, int windowHeight);
     void drawPolygon(HighReliefZone highreliefzone, QGraphicsScene* scene, int windowHeight);
     void drawPathWithObstacles(const Vec3D& p1, const Vec3D& p2, const AirSpace& airspace,
-                               QGraphicsScene* scene, int windowHeight);
+                               QGraphicsScene* scene, int windowHeight, QColor color = Qt::black);
 };
 
 #endif

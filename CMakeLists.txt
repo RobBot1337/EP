@@ -45,6 +45,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         points.cpp
         vec3D.h
         air_space_data.h
+        airspace_loader.h
+        airspace_loader.cpp
     )
 else()
     if(ANDROID)

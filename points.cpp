@@ -109,7 +109,7 @@ void rightPolygon(HighReliefZone& pol){
 
     AirSpace airspace;
     airspace.points = pol.vertices;
-    float* distanceMatrix = createDistanceMatrix(airspace);
+    float* distanceMatrix = createDistanceMatrix(airspace, 1);
     std::vector<int> result = LittleAlg(distanceMatrix, pol.vertices.size());
 
     QVector<Vec3D> sortedVertices;
@@ -395,14 +395,51 @@ double calculateDistanceWithPVO(const Vec3D& p1, const Vec3D& p2,
   return euclideanDistance(p1, p2);
 }
 
-float* createDistanceMatrix(const AirSpace& airspace) {
+float* createDistanceMatrix(const AirSpace& airspace, int numSalesmen) {
   int n = airspace.points.size();
-  float* matrix = new float[n * n];
 
-  for (int i{0}; i < n; ++i) {
-    for (int j{0}; j < n; ++j) {
+  if (numSalesmen <= 1) {
+    float* matrix = new float[n * n];
+
+    for (int i{0}; i < n; ++i) {
+      for (int j{0}; j < n; ++j) {
+        if (i == j) {
+          matrix[i * n + j] = INFINITY_F;
+          continue;
+        }
+
+        BlockedAirCorridor corridor;
+        corridor.id1 = i;
+        corridor.id2 = j;
+
+        bool isBlocked = airspace.air_corridors.contains(corridor);
+
+        if (isBlocked) {
+          matrix[i * n + j] = INFINITY_F;
+        } else {
+          double distance = calculateDistanceWithPVO(airspace.points[i],
+                                                     airspace.points[j], airspace);
+          matrix[i * n + j] = static_cast<float>(distance);
+        }
+      }
+    }
+
+    return matrix;
+  }
+
+
+  int extendedSize = n + numSalesmen - 1;  // Добавляем копии точки 0
+
+  float* matrix = new float[extendedSize * extendedSize];
+
+  for (int i = 0; i < extendedSize * extendedSize; ++i) {
+    matrix[i] = INFINITY_F;
+  }
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
       if (i == j) {
-        matrix[i * n + j] = INFINITY_F;
+        matrix[i * extendedSize + j] = INFINITY_F;
         continue;
       }
 
@@ -413,16 +450,132 @@ float* createDistanceMatrix(const AirSpace& airspace) {
       bool isBlocked = airspace.air_corridors.contains(corridor);
 
       if (isBlocked) {
-        matrix[i * n + j] = INFINITY_F;
+        matrix[i * extendedSize + j] = INFINITY_F;
       } else {
         double distance = calculateDistanceWithPVO(airspace.points[i],
                                                    airspace.points[j], airspace);
-        matrix[i * n + j] = static_cast<float>(distance);
+        matrix[i * extendedSize + j] = static_cast<float>(distance);
       }
     }
   }
 
+
+  for (int k = 0; k < numSalesmen - 1; ++k) {
+    int copyIndex = n + k;
+
+
+    for (int j = 1; j < n; ++j) {
+
+      BlockedAirCorridor corridor;
+      corridor.id1 = 0;
+      corridor.id2 = j;
+
+      bool isBlocked = airspace.air_corridors.contains(corridor);
+
+      if (isBlocked) {
+        matrix[copyIndex * extendedSize + j] = INFINITY_F;
+        matrix[j * extendedSize + copyIndex] = INFINITY_F;
+      } else {
+        double distance = calculateDistanceWithPVO(airspace.points[0],
+                                                   airspace.points[j], airspace);
+        matrix[copyIndex * extendedSize + j] = static_cast<float>(distance);
+        matrix[j * extendedSize + copyIndex] = static_cast<float>(distance);
+      }
+    }
+
+    for (int l = 0; l < numSalesmen - 1; ++l) {
+      int otherCopy = n + l;
+      matrix[copyIndex * extendedSize + otherCopy] = INFINITY_F;
+    }
+
+
+    matrix[copyIndex * extendedSize + 0] = INFINITY_F;
+    matrix[0 * extendedSize + copyIndex] = INFINITY_F;
+  }
+
   return matrix;
+}
+
+QVector<QVector<int>> splitTourIntoTours(const std::vector<int>& fullTour, int originalSize, int numSalesmen) {
+    QVector<QVector<int>> tours;
+    QVector<int> currentTour;
+
+    for (int node : fullTour) {
+        int realNode = (node >= originalSize) ? 0 : node;
+
+        if (realNode == 0) {
+
+            if (!currentTour.isEmpty()) {
+                tours.append(currentTour);
+                currentTour.clear();
+            }
+        } else {
+            currentTour.append(realNode);
+        }
+    }
+
+
+    if (!currentTour.isEmpty()) {
+        tours.append(currentTour);
+    }
+
+    return tours;
+}
+
+
+
+std::vector<std::vector<int>> solveGreedyMTSP(const AirSpace& airspace, int numSalesmen) {
+    int n = airspace.points.size();
+    if (n <= 1) return {};
+
+    std::vector<bool> visited(n, false);
+    visited[0] = true; // точка 0 - стартовая база
+
+    std::vector<std::vector<int>> tours;
+
+    for (int s = 0; s < numSalesmen; ++s) {
+        std::vector<int> tour;
+        tour.push_back(0);
+
+        int current = 0;
+        int pointsPerSalesman = (n - 1) / numSalesmen + ((s < (n - 1) % numSalesmen) ? 1 : 0);
+
+        for (int step = 0; step < pointsPerSalesman; ++step) {
+            double bestDist = INFINITY_F;
+            int bestIdx = -1;
+
+            for (int i = 1; i < n; ++i) {
+                if (!visited[i]) {
+                    double dist = calculateDistanceWithPVO(airspace.points[current],
+                                                           airspace.points[i], airspace);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestIdx = i;
+                    }
+                }
+            }
+
+            if (bestIdx == -1) break; // нет больше точек
+
+            tour.push_back(bestIdx);
+            visited[bestIdx] = true;
+            current = bestIdx;
+        }
+        if (tour.size() > 1) {
+            tour.push_back(0);
+            tours.push_back(tour);
+        }
+    }
+
+    for (int i = 1; i < n; ++i) {
+        if (!visited[i]) {
+            if (!tours.empty()) {
+                tours.back().insert(tours.back().end() - 1, i);
+            }
+        }
+    }
+
+    return tours;
 }
 
 void deleteDistanceMatrix(float* matrix) { delete[] matrix; }
